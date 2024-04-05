@@ -36,7 +36,6 @@ class DataEncoder:
             If 'pad' is not given, it will be taken to be the numerical_pad.
             If custom_column is just a transformer and not a dictionary, then
             the pad value will be taken to be the numerical_pad.
-            
         '''
 
         num_and_cat = set(numerical_columns).intersection(set(categorical_columns))

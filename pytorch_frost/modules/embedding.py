@@ -69,14 +69,22 @@ class PooledEmbeddingLayer(nn.Module):
 
         # NOTE: will ignore keys provided in data that are not in self.embeddings
         embedded_vectors = [] # [F](B, N, d)
+        embedded_masks = []
         for k,v in self.embeddings.items():
-            if torch.isnan(data[k]).any().item():
-                continue
-            embedded_vectors.append(v(data[k]))
-            # res_embed = torch.add(res_embed, v(data[k]))
-
-        res_full = torch.stack(embedded_vectors, dim=2) # (B, N, F, d)
-        res = self.pool(res_full)
+            
+            x = data[k]
+            pre_mask = ~torch.isnan(x).view(*x.shape[0:2], 1) # (B, N, 1) -- True means keep
+            x = torch.nan_to_num(x, nan=0.0)
+            x_E = v(x)
+            post_mask = ~torch.isnan(x_E).all(dim=-1, keepdim=True)
+            mask = pre_mask & post_mask
+            x_E = torch.nan_to_num(x_E, nan=0.0)
+            embedded_vectors.append(x_E)
+            embedded_masks.append(mask)
+            
+        res_full = torch.stack(embedded_vectors, dim=-2) # (B, N, F, d)
+        mask_full = torch.stack(embedded_masks, dim=-1) # (B, N, 1, F)
+        res = self.pool(res_full, mask_full)
 
         return res # (B, N, C)
                 

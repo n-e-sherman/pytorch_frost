@@ -1,6 +1,7 @@
 import pytorch_lightning as pl
 import torch
 import torch.nn as nn
+import numpy as np
 from typing import Dict, Any, Optional, Callable, Tuple, Union
 from torchmetrics.metric import Metric
 from torch.optim.lr_scheduler import CosineAnnealingLR
@@ -14,14 +15,12 @@ class MaskedEBHModel(pl.LightningModule):
     def __init__(self, 
                  embedding: nn.Module, body: nn.Module, head: nn.Module, loss: nn.Module, 
                  dropout: float=0.0, 
-                 # optimizer parameters
                  weight_decay: float=1e-1,
                  lr: float=6e-4,
                  betas: Tuple[float, float] = (0.9, 0.95),
                  use_scheduler: bool=True, # If false, constant learning rate
-                 # max_lr: float=5e-3, # not used
-                 # validation metric
                  val_metric: Optional[Metric]=None,
+                 embedding_pad_value: float=np.nan,
     ) -> None:
         super().__init__()
         
@@ -43,11 +42,16 @@ class MaskedEBHModel(pl.LightningModule):
         
         self.val_metric = val_metric
         
+        self.embedding_pad_value = embedding_pad_value
+        
+        self.apply(self._init_weights)
+        
+        print("number of parameters: %.2fM" % (self.get_num_params() / 1e6))
+        
     def forward(self, data: Dict[str, Tensor]) -> Tensor:
         
         
         # TODO: do we need to handle masking? Maybe a cleaner way to do this.
-        
         x = self.embedding(data) # (B, N, C)
         x = self.drop(x)
         
@@ -99,5 +103,19 @@ class MaskedEBHModel(pl.LightningModule):
             res['lr_scheduler'] = scheduler
             
         return res
-            
-        
+    
+    
+    def get_num_params(self) -> None:
+
+        return sum(p.numel() for p in self.parameters())
+
+    def _init_weights(self, module: nn.Module) -> None:
+
+        if isinstance(module, nn.Linear):
+            torch.nn.init.normal_(module.weight, mean=0.0, std=0.02)
+            if module.bias is not None:
+                torch.nn.init.zeros_(module.bias)
+
+        elif isinstance(module, nn.Embedding):
+            torch.nn.init.normal_(module.weight, mean=0.0, std=0.02)
+            module.weight.data[module.padding_idx] = self.embedding_pad_value

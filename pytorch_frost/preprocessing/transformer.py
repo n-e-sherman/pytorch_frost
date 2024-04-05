@@ -24,7 +24,7 @@ class DataTransformer:
         self.encoder = encoder
         self.formatter = formatter
         
-        self._embedding_info = self._get_embedding_info()
+        self._embedding_info = None
         
     def fit(self, pdf_train: PandasDataFrame, pdf_full: Optional[PandasDataFrame]=None) -> None:
         
@@ -90,7 +90,7 @@ class DataTransformer:
     @property
     def embedding_info(self):
         
-        return self._embedding_info
+        return self._embedding_info if self._embedding_info is not None else self._get_embedding_info()
     
     @property
     def targets(self):

@@ -8,12 +8,14 @@ Tensor = torch.Tensor
 class CallableMetric(Metric):
     
     def __init__(self, function: Callable, 
+                 function_kwargs: Dict[str, Any]={},
                  dist_reduce_fx: str='sum',
                  **kwargs
     ) -> None:
         super().__init__(**kwargs)
         
         self._f = function
+        self._f_kwargs = function_kwargs
         self.add_state("value", default=torch.zeros(1), dist_reduce_fx=dist_reduce_fx)
         self.add_state("count", default=torch.zeros(1), dist_reduce_fx=dist_reduce_fx)
         
@@ -21,9 +23,9 @@ class CallableMetric(Metric):
         
         # this assumes that every tensor in the dictionary has the same number of batches
         for key in output:
-            count = output[key].shape[0]
-            self.value += self._f(output[key], target[key])
-        self.count += count
+            val = self._f(output[key], target[key], **self._f_kwargs)
+            self.value += val.detach()  # Ensure detached value is used for accumulation
+            self.count += output[key].nelement() / output[key].shape[1]  # Adjust for the number of elements in a batch
         
     def compute(self) -> Tensor:
         
@@ -35,7 +37,10 @@ class BCEMetric(CallableMetric):
                  dist_reduce_fx: str='sum', 
                  **kwargs
     ) -> None:
-        super().__init__(nn.functional.binary_cross_entropy, dist_reduce_fx=dist_reduce_fx, **kwargs)
+        super().__init__(nn.functional.binary_cross_entropy, 
+                         function_kwargs={'reduction': 'sum'}, 
+                         dist_reduce_fx=dist_reduce_fx, 
+                         **kwargs)
         
 class MSEMetric(CallableMetric):
     
@@ -43,5 +48,8 @@ class MSEMetric(CallableMetric):
                  dist_reduce_fx: str='sum', 
                  **kwargs
     ) -> None:
-        super().__init__(nn.functional.mse_loss, dist_reduce_fx=dist_reduce_fx, **kwargs)
+        super().__init__(nn.functional.mse_loss, 
+                         function_kwargs={'reduction': 'sum'}, 
+                         dist_reduce_fx=dist_reduce_fx, 
+                         **kwargs)
                 
