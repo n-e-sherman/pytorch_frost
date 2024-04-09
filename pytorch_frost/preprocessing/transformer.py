@@ -97,6 +97,11 @@ class DataTransformer:
         
         return self.formatter.targets
     
+    @property
+    def encoded_pad_values(self):
+        
+        return self.encoder.encoded_pad_values
+    
     def _get_embedding_info(self) -> dict:
         
         res = {}

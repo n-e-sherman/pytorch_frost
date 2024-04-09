@@ -56,8 +56,6 @@ class MaskedEBHModel(pl.LightningModule):
         x = self.drop(x)
         
         mask = data.get('<padding_mask>', None)
-        if mask is not None:
-            mask = ~mask.bool()
         x = self.body(x, mask=mask)
         x = self.head(x)
         return x

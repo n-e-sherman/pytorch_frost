@@ -106,7 +106,7 @@ class DataFormatter:
 
         df_res = pd.DataFrame(res)
         if '<padding_mask>' in df_res.columns:
-            df_res = df_res.loc[df_res['<padding_mask>'] == 1]
+            df_res = df_res.loc[df_res['<padding_mask>'] == False]
             df_res = df_res.drop('<padding_mask>', axis=1)
         df_res = df_res.drop_duplicates()
         return df_res
