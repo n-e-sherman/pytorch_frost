@@ -60,7 +60,7 @@ class MaskedEBHModel(pl.LightningModule):
         
         mask = data.get('<padding_mask>', None)
         x = self.body(x, mask=mask)
-        x = self.head(x)
+        x = self.head(x, mask=mask)
         return x
     
     def training_step(self, batch: Any, batch_idx: int) -> Dict[str, Tensor]:

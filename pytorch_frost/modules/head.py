@@ -41,11 +41,13 @@ class PooledHeadLayer(nn.Module):
         else:
             raise NotImplementedError(f"pooling choice {pooling} is not implemented.")   
         
-    def forward(self, x: Tensor) -> Tensor:
+    def forward(self, x: Tensor, mask: Optional[Tensor]=None) -> Tensor:
         
         # x: (B, N, d)
         
-        x = self.pool(x) # (B, d) -- (B, N, d) if no pooling
+        mask = mask if mask is not None else torch.zeros_like(x, dtype=torch.bool).all(dim=-1, keepdim=True).transpose(-1, -2)
+        
+        x = self.pool(x, mask) # (B, d) -- (B, N, d) if no pooling
         x = self.head(x) # (B, T) -- (B, N, T) if no pooling
         x = self.activation(x)
         res = {}
