@@ -1,3 +1,4 @@
+import warnings
 import torch
 import torch.nn as nn
 from typing import Callable, Optional, Union
@@ -12,7 +13,7 @@ class TransformerBodyLayer(nn.Module):
                  activation: Union[str, Callable[[Tensor], Tensor]]=nn.functional.gelu,
                  layer_norm_eps: float=1e-05,
                  batch_first: bool=True,
-                 norm_first: bool=True,
+                 norm_first: bool=False,
                  device: Optional[Union[str, torch.device]]=None,
                  dtype: Optional[torch.dtype]=None,
                  enable_nested_tensor: bool=False,
@@ -20,6 +21,9 @@ class TransformerBodyLayer(nn.Module):
                  norm=None,
                  ) -> None:
         super().__init__()
+        
+        if norm_first:
+            warnings.warn('using norm_first=True in transformer, padding masks may have an unpredictable effect.')
         
         encoder_layer = nn.TransformerEncoderLayer(d_model, nhead,
                                                    dim_feedforward=dim_feedforward,
