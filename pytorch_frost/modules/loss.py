@@ -13,7 +13,8 @@ class CallableLoss(nn.Module):
 
     def forward(self, output: Dict[str, Tensor], target: Dict[str, Tensor]) -> Tensor:
         
-        res = torch.zeros(1)
+        device = next(iter(output.values())).device
+        res = torch.zeros(1, device=device)
         for key in output:
             res += self._f(output[key], target[key])
             
