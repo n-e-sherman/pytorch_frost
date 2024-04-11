@@ -22,8 +22,8 @@ class CallableMetric(Metric):
     def update(self, output: Dict[str, Tensor], target: Dict[str, Tensor]) -> None:
         
         # this assumes that every tensor in the dictionary has the same number of batches
-        device = next(iter(output.values())).device
-        val = val.to(device)
+        # device = next(iter(output.values())).device
+        # val = val.to(device)
         for key in output:
             val = self._f(output[key], target[key], **self._f_kwargs)
             self.value += val.detach()  # Ensure detached value is used for accumulation
