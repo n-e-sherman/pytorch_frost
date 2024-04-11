@@ -4,7 +4,7 @@ import torch.nn as nn
 import numpy as np
 from typing import Dict, Any, Optional, Callable, Tuple, Union
 from torchmetrics.metric import Metric
-from torch.optim.lr_scheduler import CosineAnnealingLR
+from torch.optim.lr_scheduler import CosineAnnealingLR, OneCycleLR
 from .optimizer import WeightDecayAdamW
 
 Tensor = torch.Tensor
@@ -16,8 +16,10 @@ class MaskedEBHModel(pl.LightningModule):
                  embedding: nn.Module, body: nn.Module, head: nn.Module, loss: nn.Module, 
                  dropout: float=0.0, 
                  weight_decay: float=1e-1,
-                 lr: float=6e-4,
+                 lr: float=5e-8,
                  betas: Tuple[float, float] = (0.9, 0.95),
+                 max_lr: float=1e-5,
+                 scheduler: str='one-cycle',
                  use_scheduler: bool=True, # If false, constant learning rate
                  val_metric: Optional[Metric]=None,
                  embedding_pad_value: float=np.nan,
@@ -38,7 +40,8 @@ class MaskedEBHModel(pl.LightningModule):
         self.lr = lr
         self.betas = betas
         self.use_scheduler = use_scheduler
-        # self.max_lr = max_lr
+        self.max_lr = max_lr
+        self.scheduler=scheduler
         
         self.val_metric = val_metric
         
@@ -81,7 +84,7 @@ class MaskedEBHModel(pl.LightningModule):
         val_loss = self.val_metric.update(output, target)
         
         self.log('val_loss', self.val_metric, on_step=False, on_epoch=True, prog_bar=True)
-    
+
     def configure_optimizers(self) -> None:
         
         #TODO: Include a scheduler as well and custom optimizer
@@ -91,17 +94,29 @@ class MaskedEBHModel(pl.LightningModule):
                                             lr=self.lr,
                                             betas=self.betas)
         
+        
+        
         if self.use_scheduler:
-            _scheduler = CosineAnnealingLR(res['optimizer'], T_max=self.trainer.max_epochs)
-            scheduler = {
-                'scheduler': _scheduler,
-                'interval': 'epoch',
-                'frequency': 1
-            }
+            if self.scheduler == 'cosine':
+                _scheduler = CosineAnnealingLR(res['optimizer'], T_max=self.trainer.max_epochs)
+                scheduler = {
+                    'scheduler': _scheduler,
+                    'interval': 'epoch',
+                    'frequency': 1
+                }
+            elif self.scheduler == 'one-cycle':
+                _scheduler = OneCycleLR(res['optimizer'], 
+                                        max_lr=self.max_lr, 
+                                        total_steps=self.trainer.estimated_stepping_batches)
+                scheduler = {
+                    'scheduler': _scheduler,
+                    'interval': 'step',  # Specifies to update the scheduler on every optimizer step
+                    'frequency': 1,
+                    'name': 'learning_rate',
+                }
             res['lr_scheduler'] = scheduler
             
         return res
-    
     
     def get_num_params(self) -> None:
 
