@@ -84,7 +84,7 @@ class PooledEmbeddingLayer(nn.Module):
             
         res_full = torch.stack(embedded_vectors, dim=-2) # (B, N, F, d)
         mask_full = torch.stack(embedded_masks, dim=-1) # (B, N, 1, F)
-        res = self.pool(res_full, mask_full)
+        res = self.pool(res_full, ~mask_full)
 
         return res # (B, N, C)
                 
