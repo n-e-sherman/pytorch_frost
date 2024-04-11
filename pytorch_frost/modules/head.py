@@ -45,9 +45,9 @@ class PooledHeadLayer(nn.Module):
         
         # x: (B, N, d)
         
-        mask = mask if mask is not None else torch.zeros_like(x, dtype=torch.bool).all(dim=-1, keepdim=True).transpose(-1, -2)
+        mask = mask if mask is not None else torch.zeros_like(x, dtype=torch.bool).all(dim=-1, keepdim=False)
         
-        x = self.pool(x, mask) # (B, d) -- (B, N, d) if no pooling
+        x = self.pool(x, mask.unsqueeze(-2)) # (B, d) -- (B, N, d) if no pooling
         x = self.head(x) # (B, T) -- (B, N, T) if no pooling
         x = self.activation(x)
         res = {}
